@@ -30,7 +30,7 @@ def zbiornik_model(x, t):
 
 
 class SuperContainer:
-    def __init__(self, h):
+    def __init__(self, h, ax):
         container_points = [[-3, 2], [-3, -2], [3, -2], [3, 2]]
         pipe_in_points = [[-2.7, 2.3], [-5, 2.4], [-5, 2.2], [-2.7, 2.1]]
         pipe_out_points = [
@@ -42,9 +42,13 @@ class SuperContainer:
             [2.2, -2],
         ]
         fill_points = self.__get_fill_points()
+        pointer_points = [[3, 2], [5, 2]]
 
         self.outline = plt.Polygon(
             container_points, closed=None, edgecolor="k", fill=False, lw=4
+        )
+        self.pointer = plt.Polygon(
+            pointer_points, closed=None, edgecolor="r", fill=False, lw=1
         )
         self.fill = plt.Polygon(fill_points, facecolor="b", edgecolor=None, fill=True)
         self.pipe_in = plt.Polygon(
@@ -53,6 +57,7 @@ class SuperContainer:
         self.pipe_out = plt.Polygon(
             pipe_out_points, closed=None, edgecolor="k", facecolor="b", lw=2
         )
+        self.text = ax.text(4, 2, "h=foo")
         self.__h = h
 
     def add_path(self, gca):
@@ -60,6 +65,7 @@ class SuperContainer:
         gca.add_patch(self.outline)
         gca.add_patch(self.pipe_in)
         gca.add_patch(self.pipe_out)
+        gca.add_patch(self.pointer)
 
     def __wavy(self, x1, x2, y0, points, amp=1, offset=0, reverse=False):
         ax = np.linspace(x1, x2, points)
@@ -84,23 +90,28 @@ class SuperContainer:
 
     def animate(self, i):
         h = self.__h[i]
-        self.fill.set_xy(self.__get_fill_points(i, h))
 
-        return (self.fill,)
+        h_max = 10
+        y_min = -1.9
+        y = y_min + h / h_max
+
+        self.fill.set_xy(self.__get_fill_points(i, h))
+        self.pointer.set_xy([[3, y], [5, y]])
+        self.text.set_position([3.5, y])
+        self.text.set_text("h = %.1f" % h)
+
+        return (self.fill, self.pointer, self.text)
 
 
 def init():
-    global superContainer, h
-    superContainer = SuperContainer(h)
+    global superContainer, h, ax0
+    superContainer = SuperContainer(h, ax0)
     superContainer.add_path(plt.gca())
-    time_text.set_text("")
-    return (time_text,)
+    return superContainer.animate(0)
 
 
 def animate(i):
-    global x
-    time_text.set_text(time_template % (i * dt, x[i, 0]))
-    return time_text, *superContainer.animate(i)
+    return superContainer.animate(i)
 
 
 fig = plt.figure()
@@ -122,11 +133,8 @@ ax1.set_xlabel("t")
 ax0 = fig.add_subplot(211, autoscale_on=False, xlim=(-5, 5), ylim=(-5, 5))
 ax0.grid()
 
-time_template = "time = %.1fs, h = %.1f"
-time_text = ax0.text(0.05, 0.9, "", transform=ax0.transAxes)
-
 ani = FuncAnimation(
     fig, animate, np.arange(1, len(t)), interval=25, blit=True, init_func=init
 )
-# ani.save("preview.html", fps=15)
+
 plt.show()
