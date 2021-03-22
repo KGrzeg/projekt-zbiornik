@@ -53,27 +53,68 @@ dt = 0.05
 t = np.arange(0.0, 20, dt)
 
 
-def static_objects():
-    container_points = [[-3, 2], [-2.8, -2], [2.8, -2], [3, 2]]
-    container = plt.Polygon(
-        container_points, closed=None, edgecolor="k", fill=False, lw=4
-    )
+def wavy(x1, x2, y0, points, amp=1, offset=0, reverse=False):
+    ax = np.linspace(x1, x2, points)
+    ay = np.sin(np.linspace(0, (x2 - x1) * 5, points) + offset) * amp
+    ay = ay + y0
 
-    pipe_in_points = [[-2.7, 2.3], [-5, 2.4], [-5, 2.2], [-2.7, 2.1]]
-    pipe_in = plt.Polygon(pipe_in_points, closed=None, edgecolor="k", fill=False, lw=2)
+    if reverse:
+        ax = np.flip(ax)
 
-    pipe_out_points = [[2, -2], [2.1, -4], [5, -4], [5, -3.8], [2.3, -3.8], [2.2, -2]]
-    pipe_out = plt.Polygon(
-        pipe_out_points, closed=None, edgecolor="k", fill=False, lw=2
-    )
+    return np.vstack((ax, ay)).T
 
-    plt.gca().add_patch(container)
-    plt.gca().add_patch(pipe_in)
-    plt.gca().add_patch(pipe_out)
+
+class SuperContainer:
+    def __init__(self):
+        container_points = [[-3, 2], [-2.8, -2], [2.8, -2], [3, 2]]
+        pipe_in_points = [[-2.7, 2.3], [-5, 2.4], [-5, 2.2], [-2.7, 2.1]]
+        pipe_out_points = [
+            [2, -2],
+            [2.1, -4],
+            [5, -4],
+            [5, -3.8],
+            [2.3, -3.8],
+            [2.2, -2],
+        ]
+        fill_points = self.__get_fill_points()
+
+        self.outline = plt.Polygon(
+            container_points, closed=None, edgecolor="k", fill=False, lw=4
+        )
+        self.fill = plt.Polygon(fill_points, facecolor="b", edgecolor=None, fill=True)
+        self.pipe_in = plt.Polygon(
+            pipe_in_points, closed=None, edgecolor="k", fill=False, lw=2
+        )
+        self.pipe_out = plt.Polygon(
+            pipe_out_points, closed=None, edgecolor="k", fill=False, lw=2
+        )
+
+    def add_path(self, gca):
+        gca.add_patch(self.outline)
+        gca.add_patch(self.fill)
+        gca.add_patch(self.pipe_in)
+        gca.add_patch(self.pipe_out)
+
+    def __get_fill_points(self, offset=0):
+        return [
+            [-3, 2],
+            [-2.8, -2],
+            [2.8, -2],
+            [3, 2],
+            *wavy(-3, 3, 2, 30, 0.1, offset * 0.1, True),
+        ]
+
+    def animate(self, i):
+        self.fill.set_xy(self.__get_fill_points(i))
+
+        return (self.fill,)
+
+
+superContainer = SuperContainer()
 
 
 def init():
-    static_objects()
+    superContainer.add_path(plt.gca())
     line.set_data([], [])
     time_text.set_text("")
     return line, time_text
@@ -85,8 +126,7 @@ def animate(i):
 
     line.set_data(thisx, thisy)
     time_text.set_text(time_template % (i * dt))
-    print("Jestę %d" % i)
-    return line, time_text
+    return line, time_text, *superContainer.animate(i)
 
 
 ani = FuncAnimation(
