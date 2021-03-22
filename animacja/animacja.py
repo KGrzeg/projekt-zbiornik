@@ -30,26 +30,6 @@ def zbiornik_model(x, t):
     return [dhdt, Qin]
 
 
-# h = x[:, 0]
-# Q = x[:, 1]
-
-# plt.plot(t, h)
-# plt.show()
-
-# animacja
-
-
-def wavy(x1, x2, y0, points, amp=1, offset=0, reverse=False):
-    ax = np.linspace(x1, x2, points)
-    ay = np.sin(np.linspace(0, (x2 - x1) * 5, points) + offset) * amp
-    ay = ay + y0
-
-    if reverse:
-        ax = np.flip(ax)
-
-    return np.vstack((ax, ay)).T
-
-
 class SuperContainer:
     def __init__(self, data):
         container_points = [[-3, 2], [-3, -2], [3, -2], [3, 2]]
@@ -69,34 +49,44 @@ class SuperContainer:
         )
         self.fill = plt.Polygon(fill_points, facecolor="b", edgecolor=None, fill=True)
         self.pipe_in = plt.Polygon(
-            pipe_in_points, closed=None, edgecolor="k", fill=False, lw=2
+            pipe_in_points, closed=None, edgecolor="k", facecolor="b", lw=2
         )
         self.pipe_out = plt.Polygon(
-            pipe_out_points, closed=None, edgecolor="k", fill=False, lw=2
+            pipe_out_points, closed=None, edgecolor="k", facecolor="b", lw=2
         )
         self.__h = data[:, 0]
         self.__Q = data[:, 1]
 
     def add_path(self, gca):
-        gca.add_patch(self.outline)
         gca.add_patch(self.fill)
+        gca.add_patch(self.outline)
         gca.add_patch(self.pipe_in)
         gca.add_patch(self.pipe_out)
 
+    def __wavy(self, x1, x2, y0, points, amp=1, offset=0, reverse=False):
+        ax = np.linspace(x1, x2, points)
+        ay = np.sin(np.linspace(0, (x2 - x1) * 5, points) + offset) * amp
+        ay = ay + y0
+
+        if reverse:
+            ax = np.flip(ax)
+
+        return np.vstack((ax, ay)).T
+
     def __get_fill_points(self, offset=0, h=0):
         h_max = 10
-        y_min = -2
+        y_min = -1.9
         y = y_min + h / h_max
         return [
             [-3, y],
-            [-3, -2],
-            [3, -2],
-            [3, 2],
-            *wavy(-3, 3, y, 30, 0.1, offset * 0.1, True),
+            [-3, y_min],
+            [3, y_min],
+            *self.__wavy(-3, 3, y, 30, 0.1, offset * 0.1, True),
         ]
 
     def animate(self, i):
-        self.fill.set_xy(self.__get_fill_points(i, self.__h[i]))
+        h = self.__h[i]
+        self.fill.set_xy(self.__get_fill_points(i, h))
 
         return (self.fill,)
 
@@ -116,11 +106,6 @@ def animate(i):
 
 
 fig = plt.figure()
-ax = fig.add_subplot(111, autoscale_on=False, xlim=(-5, 5), ylim=(-5, 5))
-ax.grid()
-
-time_template = "time = %.1fs, h = %.1f"
-time_text = ax.text(0.05, 0.9, "", transform=ax.transAxes)
 
 dt = 0.05
 t = np.arange(0.0, 20, dt)
@@ -128,6 +113,19 @@ t = np.arange(0.0, 20, dt)
 x0 = [0, 0]
 x = odeint(zbiornik_model, x0, t)
 superContainer = None
+
+h = x[:, 0]
+Q = x[:, 1]
+ax1 = fig.add_subplot(212, autoscale_on=True)
+ax1.plot(t, h, label="h")
+ax1.plot(t, Q, label="Q")
+ax1.set_xlabel("t")
+
+ax0 = fig.add_subplot(211, autoscale_on=False, xlim=(-5, 5), ylim=(-5, 5))
+ax0.grid()
+
+time_template = "time = %.1fs, h = %.1f"
+time_text = ax0.text(0.05, 0.9, "", transform=ax0.transAxes)
 
 ani = FuncAnimation(
     fig, animate, np.arange(1, len(t)), interval=25, blit=True, init_func=init
