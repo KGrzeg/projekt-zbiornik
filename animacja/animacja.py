@@ -10,9 +10,9 @@ from matplotlib.animation import FuncAnimation
 def Q(t):
     if t < 2:
         return 1
-    elif t < 8:
-        return 3
-    elif t < 11:
+    elif t < 5:
+        return 0
+    elif t < 17:
         return 0.5
     return 5
 
@@ -21,17 +21,16 @@ def zbiornik_model(x, t):
     A = 2  # pole powierzchni lustra wody
     g = 9.81  # warość przyśpieszenia ziemskiego
     s = 0.02  # pole powierzchni przekroju wypływu
-    # Qin = 0.005  # przepływ wejściowy
     Qin = Q(t)
     h = x[0]
 
     dhdt = 1 / A * (Qin - s * sqrt(2 * g * h))
 
-    return [dhdt, Qin]
+    return [dhdt]
 
 
 class SuperContainer:
-    def __init__(self, data):
+    def __init__(self, h):
         container_points = [[-3, 2], [-3, -2], [3, -2], [3, 2]]
         pipe_in_points = [[-2.7, 2.3], [-5, 2.4], [-5, 2.2], [-2.7, 2.1]]
         pipe_out_points = [
@@ -54,8 +53,7 @@ class SuperContainer:
         self.pipe_out = plt.Polygon(
             pipe_out_points, closed=None, edgecolor="k", facecolor="b", lw=2
         )
-        self.__h = data[:, 0]
-        self.__Q = data[:, 1]
+        self.__h = h
 
     def add_path(self, gca):
         gca.add_patch(self.fill)
@@ -92,8 +90,8 @@ class SuperContainer:
 
 
 def init():
-    global superContainer, x
-    superContainer = SuperContainer(x)
+    global superContainer, h
+    superContainer = SuperContainer(h)
     superContainer.add_path(plt.gca())
     time_text.set_text("")
     return (time_text,)
@@ -110,12 +108,12 @@ fig = plt.figure()
 dt = 0.05
 t = np.arange(0.0, 20, dt)
 
-x0 = [0, 0]
+x0 = [0]
 x = odeint(zbiornik_model, x0, t)
 superContainer = None
 
 h = x[:, 0]
-Q = x[:, 1]
+Q = [Q(t) for t in t]
 ax1 = fig.add_subplot(212, autoscale_on=True)
 ax1.plot(t, h, label="h")
 ax1.plot(t, Q, label="Q")
